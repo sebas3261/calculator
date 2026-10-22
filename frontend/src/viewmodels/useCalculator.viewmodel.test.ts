@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { useCalculator } from './useCalculator.viewmodel'
 import { calculatorService } from '../services/Calculator.service'
-import { HttpError } from '../lib/http'
+import { HttpError, NetworkError } from '../lib/http'
 
 vi.mock('../services/Calculator.service', () => ({ calculatorService: { calculate: vi.fn() } }))
 const calculate = vi.mocked(calculatorService.calculate)
@@ -68,11 +68,11 @@ describe('useCalculator', () => {
   })
 
   it('reports a network failure and stops loading', async () => {
-    calculate.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    calculate.mockRejectedValueOnce(new NetworkError())
     const { result } = renderHook(useCalculator)
     act(() => result.current.updateExpression('2+2'))
     await act(() => result.current.calculate())
-    expect(result.current.error).toContain('Unable to calculate')
+    expect(result.current.error).toContain('Unable to connect')
     expect(result.current.isLoading).toBe(false)
   })
 
@@ -81,7 +81,7 @@ describe('useCalculator', () => {
     const { result } = renderHook(useCalculator)
     act(() => result.current.updateExpression('2^9999'))
     await act(() => result.current.calculate())
-    expect(result.current.error).not.toBe('')
+    expect(result.current.error).toBe('The server returned an invalid calculation result.')
     expect(result.current.result).toBe(0)
   })
 
@@ -112,5 +112,27 @@ describe('useCalculator', () => {
     expect(result.current.expression).toBe('')
     expect(result.current.result).toBe(0)
     expect(result.current.error).toBe('')
+  })
+})
+
+describe('input validation and scientific result continuation', () => {
+  it('rejects unsupported characters before calling the API', async () => {
+    const { result } = renderHook(useCalculator)
+    act(() => result.current.updateExpression('2+alert(1)'))
+    await act(() => result.current.calculate())
+    expect(calculate).not.toHaveBeenCalled()
+    expect(result.current.error).toContain('supported mathematical operators')
+  })
+
+  it.each([1e21, 1e-7, -1e21])('can reuse the result %s', async (answer) => {
+    calculate.mockResolvedValueOnce({ answer }).mockResolvedValueOnce({ answer: answer * 2 })
+    const { result } = renderHook(useCalculator)
+    act(() => result.current.updateExpression('10^21'))
+    await act(() => result.current.calculate())
+    act(() => result.current.pressKey('×'))
+    act(() => result.current.pressKey('2'))
+    await act(() => result.current.calculate())
+    expect(calculate).toHaveBeenLastCalledWith(`${answer < 0 ? `(${answer})` : answer}*2`)
+    expect(result.current.result).toBe(answer * 2)
   })
 })

@@ -12,6 +12,13 @@ export class HttpError extends Error {
   }
 }
 
+export class NetworkError extends Error {
+  constructor() {
+    super("Unable to connect to the server. Please try again.");
+    this.name = "NetworkError";
+  }
+}
+
 async function request<T>(
   method: string,
   endpoint: string,
@@ -25,7 +32,7 @@ async function request<T>(
     ...(body !== undefined && {
       body: JSON.stringify(body),
     }),
-  });
+  }).catch(() => { throw new NetworkError(); });
 
   if (!response.ok) {
     const error = await response.json().catch(() => null);
@@ -36,7 +43,11 @@ async function request<T>(
     );
   }
 
-  return response.json() as Promise<T>;
+  try {
+    return await response.json() as T;
+  } catch {
+    throw new Error("The server returned an invalid response.");
+  }
 }
 
 export const http = {

@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import { calculatorService } from '../services/Calculator.service'
-import { HttpError } from '../lib/http'
 
 const operators: Record<string, string> = { '×': '*', '÷': '/', '−': '-' }
 
@@ -14,6 +13,7 @@ export function useCalculator() {
   const pending = useRef(false)
 
   function updateExpression(value: string) {
+    if (pending.current) return
     setExpression(value)
     setError('')
     setIsComplete(false)
@@ -26,17 +26,21 @@ export function useCalculator() {
 
   async function calculate() {
     if (pending.current || !expression.trim()) return
+    if (/[^0-9eE+\-*/^%().√×÷−\s]/u.test(expression)) {
+      setError('Use numbers, parentheses, and supported mathematical operators only.')
+      return
+    }
     pending.current = true
     setIsLoading(true)
     setError('')
     try {
       const normalized = expression.replace(/[×÷−]/g, (symbol) => operators[symbol])
       const response = await calculatorService.calculate(normalized)
-      if (!Number.isFinite(response.answer)) throw new Error('Invalid result')
+      if (!Number.isFinite(response.answer)) throw new Error('The server returned an invalid calculation result.')
       setResult(response.answer)
       setIsComplete(true)
     } catch (cause) {
-      setError(cause instanceof HttpError ? cause.message : 'Unable to calculate. Check that the server is running and try again.')
+      setError(cause instanceof Error ? cause.message : 'An unexpected error occurred.')
     } finally {
       pending.current = false
       setIsLoading(false)

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { calculatorService } from './Calculator.service'
-import { HttpError } from '../lib/http'
+import { HttpError, NetworkError } from '../lib/http'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -25,5 +25,16 @@ describe('calculator API integration', () => {
   it('handles non-JSON error responses', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('Bad Gateway', { status: 502 })))
     await expect(calculatorService.calculate('2+2')).rejects.toBeInstanceOf(HttpError)
+  })
+})
+
+describe('API failure categories', () => {
+  it('distinguishes transport failure from HTTP errors', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    await expect(calculatorService.calculate('2+2')).rejects.toBeInstanceOf(NetworkError)
+  })
+  it('reports malformed success responses without blaming the connection', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('not JSON')))
+    await expect(calculatorService.calculate('2+2')).rejects.toThrow('The server returned an invalid response.')
   })
 })
