@@ -24,3 +24,10 @@ type UnaryNode struct {
 }
 
 func (UnaryNode) node() {}
+
+type FunctionNode struct {
+    Name      string
+    Arguments []Node
+}
+
+func (FunctionNode) node() {}
