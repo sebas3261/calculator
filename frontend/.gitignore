@@ -25,3 +25,8 @@ dist-ssr
 
 # Test coverage
 coverage/
+
+# Local environment configuration
+.env
+.env.*
+!.env.example
