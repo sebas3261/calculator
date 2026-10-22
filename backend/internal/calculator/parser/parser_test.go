@@ -25,6 +25,11 @@ func TestParse_ValidExpressions(t *testing.T) {
 		want calculator.Node
 	}{
 		{"integer", "42", num(42)},
+		{"scientific_positive_exponent", "1e+21", num(1e21)},
+		{"scientific_negative_exponent", "2.5E-7", num(2.5e-7)},
+		{"scientific_unsigned_exponent", "3e2", num(300)},
+		{"scientific_continuation", "1e+21*2", bin(num(1e21), "*", num(2))},
+		{"negative_scientific_continuation", "(-1e-7)^2", bin(un("-", num(1e-7)), "^", num(2))},
 		{"decimal", "3.14", num(3.14)},
 		{"addition", "1 + 2", bin(num(1), "+", num(2))},
 		{"subtraction", "5 - 3", bin(num(5), "-", num(3))},
@@ -66,6 +71,12 @@ func TestParse_Errors(t *testing.T) {
 		expr string
 	}{
 		{"empty_expression", ""},
+		{"missing_exponent", "1e"},
+		{"missing_signed_exponent", "1e+"},
+		{"invalid_exponent", "1e-x"},
+		{"decimal_exponent", "1e2.5"},
+		{"repeated_exponent", "1e2e3"},
+		{"overflow", "1e9999"},
 		{"whitespace_only", "   "},
 		{"trailing_garbage", "1 2"},
 		{"unexpected_character", "@"},

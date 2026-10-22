@@ -23,6 +23,20 @@ func (s *parserState) parseNumber() (calculator.Node, error) {
 		s.advance()
 	}
 
+	// Scientific notation is also used when continuing from JavaScript results.
+	if s.current() == 'e' || s.current() == 'E' {
+		s.advance()
+		if s.current() == '+' || s.current() == '-' {
+			s.advance()
+		}
+		if !s.isDigit() {
+			return nil, errors.New("scientific notation requires exponent digits")
+		}
+		for s.isDigit() {
+			s.advance()
+		}
+	}
+
 	number := s.input[start:s.pos]
 	value, err := strconv.ParseFloat(number, 64)
 	if err != nil {
