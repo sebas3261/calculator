@@ -1,12 +1,14 @@
 const BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
 export class HttpError extends Error {
+  public readonly status: number;
   constructor(
-    public readonly status: number,
+    status: number,
     message: string
   ) {
     super(message);
     this.name = "HttpError";
+    this.status = status;
   }
 }
 

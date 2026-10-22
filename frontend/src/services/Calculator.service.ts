@@ -1,8 +1,6 @@
 import { http } from "../lib/http";
-import type {
-  CalculationRequest,
-  CalculationResponse,
-} from "../models/calculator.model";
+import type { CalculationRequest } from "../models/CalculationRequest";
+import type { CalculationResponse } from "../models/CalculationResponse";
 
 export const calculatorService = {
   calculate: (expression: string) =>
